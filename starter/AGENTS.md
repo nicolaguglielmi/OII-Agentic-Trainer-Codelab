@@ -48,7 +48,7 @@ Nodi LLM: reader, quick_solver, test_author, test_author_v, reviewer, tutor. Gli
 - Il Workflow copia gli Agent: non modificarli dopo averlo creato.
 - adk web: oii_solver/__init__.py con "from . import agent"; root_agent in agent.py.
   adk web --reload_agents ricarica gli agenti quando cambia il codice.
-- Modelli da .env: FAST_MODEL, STRONG_MODEL (default gemini-3.5-flash).
+- Modelli da .env: FAST_MODEL, STRONG_MODEL (default gemini-3.8-flash).
 
 ## API training.olinfo.it (non documentata, dal client @olinfo/training-api)
 POST JSON a https://training.olinfo.it/api/<endpoint> → {"success":1,...} o {"success":0,"error"}

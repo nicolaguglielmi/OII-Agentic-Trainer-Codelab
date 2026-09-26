@@ -32,7 +32,7 @@
         <p class="image-container"><img alt="OII Agentic Trainer: il concorrente artificiale" src="img/35d5fade9334ad57.png"></p>
 <p>In questo codelab costruisci, un prompt alla volta, una rete di agenti che affronta i problemi delle Olimpiadi Italiane di Informatica (OII) con il metodo di un concorrente: legge il testo, scrive una prima soluzione corretta, la mette alla prova contro una brute force e la migliora finché i subtask non entrano nei limiti di tempo.</p>
 <p>La stessa rete ha una seconda modalità, pensata per chi si allena: carichi il tuo codice e ottieni una review, una guida passo passo per renderlo più veloce e una vista visiva di ogni correzione.</p>
-<p>Non scriverai il codice a mano. Lo scriverà Antigravity CLI (<code>agy</code>) a partire da prompt precisi, guidato da un file di contesto. Il tuo lavoro è quello di un progettista: decidere il grafo, verificare ogni passo, capire cosa sta succedendo.</p>
+<p>Non scriverai il codice a mano. Lo scriverà un agente di programmazione da terminale, Antigravity CLI (<code>agy</code>) oppure Claude Code (<code>claude</code>), a partire da prompt precisi e guidato da un file di contesto. Il tuo lavoro è quello di un progettista: decidere il grafo, verificare ogni passo, capire cosa sta succedendo.</p>
 <h2 is-upgraded>Cosa costruirai</h2>
 <p class="image-container"><img alt="Il grafo completo della rete di agenti: dall&amp;rsquo;Intake al Test runner, il ciclo con il Reviewer e le due uscite, invio o guida" src="img/69b1984f1d66c991.png"></p>
 <p>In verde gli agenti LLM, in grigio i nodi di codice, in giallo i punti in cui interviene una persona. Il tratteggio ambra è il ciclo di miglioramento tra Test runner e Reviewer.</p>
@@ -51,7 +51,7 @@
 <ul>
 <li>Un computer macOS o Linux. Su Windows usa <a href="https://learn.microsoft.com/windows/wsl/install" target="_blank">WSL</a>: il sistema limita tempo e memoria dei programmi con funzioni che esistono solo su Linux e macOS.</li>
 <li>Python 3.10 o superiore.</li>
-<li>Un account Google, per Antigravity CLI e per la chiave API di Gemini.</li>
+<li>Un account Google, per la chiave API di Gemini e per Antigravity CLI. In alternativa ad Antigravity puoi usare Claude Code, che richiede un piano Claude a pagamento (Pro, Max, Team o Enterprise) o un account Console.</li>
 <li>Circa un&#39;ora e mezza. Il resto lo installi nel prossimo passo.</li>
 <li>Facoltativo: un account su training.olinfo.it dedicato agli esperimenti, se vuoi inviare le soluzioni al grader ufficiale.</li>
 </ul>
@@ -124,20 +124,28 @@ for x in a:
       </google-codelab-step>
     
       <google-codelab-step label="Installa gli strumenti" duration="8">
-        <p>Servono tre cose: Python, Antigravity CLI e una chiave API di Gemini. Le installi una volta sola, poi valgono per tutti i progetti.</p>
+        <p>Servono tre cose: Python, un agente di programmazione da terminale e una chiave API di Gemini. Le installi una volta sola, poi valgono per tutti i progetti.</p>
 <h2 is-upgraded>Python</h2>
 <p>Controlla la versione:</p>
 <pre>python3 --version
 </pre>
 <p>Serve 3.10 o superiore. Se manca o è più vecchio, installalo da <a href="https://www.python.org/downloads/" target="_blank">python.org</a> o con il gestore di pacchetti del tuo sistema.</p>
-<h2 is-upgraded>Antigravity CLI</h2>
-<p>Antigravity CLI è l&#39;agente di programmazione che scriverà il codice al posto tuo. Si installa con un comando:</p>
+<h2 is-upgraded>L&#39;agente di programmazione</h2>
+<p>È lui che scriverà il codice al posto tuo. Il codelab è pensato per Antigravity CLI, ma funziona allo stesso modo con Claude Code: scegline uno.</p>
+<h3 is-upgraded>Antigravity CLI</h3>
+<p>Si installa con un comando:</p>
 <pre>curl -fsSL https://antigravity.google/cli/install.sh | bash
 </pre>
 <p>Il comando si chiama <code>agy</code> e finisce in <code>~/.local/bin</code>. Se il terminale non lo trova, aprine uno nuovo oppure aggiungi la cartella al <code>PATH</code>:</p>
 <pre>export PATH=&#34;$HOME/.local/bin:$PATH&#34;
 </pre>
 <p>Al primo avvio <code>agy</code> apre il browser per l&#39;accesso con il tuo account Google. Dettagli e alternative nella <a href="https://antigravity.google/docs/cli/install/" target="_blank">guida all&#39;installazione</a>.</p>
+<h3 is-upgraded>In alternativa: Claude Code</h3>
+<pre>curl -fsSL https://claude.ai/install.sh | bash
+claude --version
+</pre>
+<p>Al primo avvio <code>claude</code> apre il browser per l&#39;accesso. Serve un piano Claude a pagamento o un account Console: il piano gratuito di claude.ai non include Claude Code. Altri metodi di installazione, compreso Homebrew, nella <a href="https://code.claude.com/docs/en/setup" target="_blank">guida di Claude Code</a>.</p>
+<p>Claude Code legge da solo il file <code>AGENTS.md</code> del progetto (dalla versione 2.1.277). Con una versione più vecchia, crea nella cartella del progetto un file <code>CLAUDE.md</code> che contiene soltanto la riga <code>@AGENTS.md</code>.</p>
 <h2 is-upgraded>La chiave API di Gemini</h2>
 <p>Gli agenti del sistema usano i modelli Gemini. Crea una chiave gratuita su <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a> e tienila a portata di mano: la metterai nel file <code>.env</code> tra poco.</p>
 <aside class="warning"><p> La chiave è personale: non incollarla in chat, non pubblicarla e non caricarla su GitHub. Il file <code>.env</code> che la contiene resta solo sul tuo computer. </p>
@@ -146,6 +154,7 @@ for x in a:
 <ul>
 <li><a href="https://adk.dev/get-started/installation/" target="_blank">Installare ADK per Python</a> e la <a href="https://adk.dev/get-started/python/" target="_blank">guida rapida</a></li>
 <li><a href="https://antigravity.google/docs/cli/install/" target="_blank">Antigravity CLI: installazione e accesso</a> e <a href="https://antigravity.google/docs/cli/tutorial/" target="_blank">tutorial</a></li>
+<li><a href="https://code.claude.com/docs/en/setup" target="_blank">Claude Code: installazione</a> e <a href="https://code.claude.com/docs/en/memory" target="_blank">come usa AGENTS.md</a></li>
 <li><a href="https://adk.dev/agents/models/google-gemini/" target="_blank">Usare i modelli Gemini con ADK</a></li>
 </ul>
 
@@ -185,12 +194,12 @@ git add -A &amp;&amp; git commit -m &#34;starter kit&#34;
 <p>Apri <code>.env</code> e sostituisci <code>la-tua-chiave</code> con la chiave di AI Studio. <code>adk web</code> legge il file da solo all&#39;avvio. Il contenuto è questo:</p>
 <pre>GOOGLE_GENAI_USE_VERTEXAI=FALSE
 GOOGLE_API_KEY=la-tua-chiave
-FAST_MODEL=gemini-3.5-flash
-STRONG_MODEL=gemini-3.5-flash
+FAST_MODEL=gemini-3.8-flash
+STRONG_MODEL=gemini-3.8-flash
 # 1 = l&#39;invio al sito è simulato; il download resta sempre reale
 OLINFO_DRY_RUN=1
 </pre>
-<p>Se hai accesso a un modello più forte, mettilo in <code>STRONG_MODEL</code>: lo useranno il Reviewer e il Tutor.</p>
+<p>Il codelab usa <code>gemini-3.8-flash</code>, veloce ed economico ma già molto capace. Puoi mettere in <code>FAST_MODEL</code> e <code>STRONG_MODEL</code> qualsiasi <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank">modello Gemini supportato</a>, scrivendo il suo codice esatto: <code>FAST_MODEL</code> serve agli agenti che devono rispondere in fretta (Reader, Solver rapido, Test author), <code>STRONG_MODEL</code> a quelli che ragionano di più (Reviewer e Tutor).</p>
 <h2 is-upgraded>Scegli il problema</h2>
 <p>Apri la pagina dei problemi di training.olinfo.it (per anno, oppure Nazionali e OIS) e scegli un task, con un nome come <code>oii_*</code>, <code>preoii_*</code> o <code>ois_*</code>. Il nome è l&#39;ultima parte dell&#39;indirizzo della pagina del task. Nella pagina pubblica controlla due cose:</p>
 <ul>
@@ -210,14 +219,20 @@ fallback/&lt;task&gt;/meta.json
 <pre><code language="language-json" class="language-json">{&#34;titolo&#34;: &#34;...&#34;, &#34;time_limit&#34;: 2, &#34;memory_limit_mb&#34;: 256, &#34;io&#34;: &#34;stdin/stdout&#34;}
 </code></pre>
 <p>Il downloader usa il fallback solo se il sito non risponde o se il PDF scaricato non è valido, e in chat dice da dove arrivano i dati. Il testo appartiene agli organizzatori delle Olimpiadi: tienilo nella tua copia locale e non pubblicarlo.</p>
-<h2 is-upgraded>Configura agy</h2>
-<p>Con l&#39;ambiente virtuale attivo, avvia agy dalla cartella del progetto:</p>
-<pre>agy
-</pre>
+<h2 is-upgraded>Configura l&#39;agente di programmazione</h2>
+<p>Con l&#39;ambiente virtuale attivo, avvia l&#39;agente dalla cartella del progetto: <code>agy</code> per Antigravity, <code>claude</code> per Claude Code.</p>
+<p>Con Antigravity CLI:</p>
 <ul>
 <li>Con <code>/model</code> scegli il modello più forte disponibile per il tuo account.</li>
 <li>Con <code>/permissions</code> controlla cosa agy può fare da solo. Lascia che modifichi i file del progetto senza chiedere, ma tieni la conferma sui comandi che escono dalla sandbox: vedrai ogni comando prima che parta. I dettagli sono nella pagina sui <a href="https://antigravity.google/docs/permissions/" target="_blank">permessi</a>.</li>
 </ul>
+<p>Con Claude Code:</p>
+<ul>
+<li>Con <code>/model</code> scegli il modello.</li>
+<li>Con <code>Shift+Tab</code> passa alla modalità <code>accept edits</code>: Claude modifica i file senza chiedere, ma ti chiede conferma prima dei comandi. Le altre modalità sono descritte nella pagina sui <a href="https://code.claude.com/docs/en/permission-modes" target="_blank">permessi</a>.</li>
+</ul>
+<aside class="special"><p> Nel resto del codelab scriviamo sempre «agy». Se usi Claude Code, i prompt sono identici: incollali in <code>claude</code>. </p>
+</aside>
 
 
       </google-codelab-step>
@@ -277,7 +292,7 @@ Nodi LLM: reader, quick_solver, test_author, test_author_v, reviewer, tutor. Gli
 - Il Workflow copia gli Agent: non modificarli dopo averlo creato.
 - adk web: oii_solver/__init__.py con &#34;from . import agent&#34;; root_agent in agent.py.
   adk web --reload_agents ricarica gli agenti quando cambia il codice.
-- Modelli da .env: FAST_MODEL, STRONG_MODEL (default gemini-3.5-flash).
+- Modelli da .env: FAST_MODEL, STRONG_MODEL (default gemini-3.8-flash).
 
 ## API training.olinfo.it (non documentata, dal client @olinfo/training-api)
 POST JSON a https://training.olinfo.it/api/&lt;endpoint&gt; → {&#34;success&#34;:1,...} o {&#34;success&#34;:0,&#34;error&#34;}

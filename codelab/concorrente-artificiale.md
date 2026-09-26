@@ -17,7 +17,7 @@ In questo codelab costruisci, un prompt alla volta, una rete di agenti che affro
 
 La stessa rete ha una seconda modalità, pensata per chi si allena: carichi il tuo codice e ottieni una review, una guida passo passo per renderlo più veloce e una vista visiva di ogni correzione.
 
-Non scriverai il codice a mano. Lo scriverà Antigravity CLI (`agy`) a partire da prompt precisi, guidato da un file di contesto. Il tuo lavoro è quello di un progettista: decidere il grafo, verificare ogni passo, capire cosa sta succedendo.
+Non scriverai il codice a mano. Lo scriverà un agente di programmazione da terminale, Antigravity CLI (`agy`) oppure Claude Code (`claude`), a partire da prompt precisi e guidato da un file di contesto. Il tuo lavoro è quello di un progettista: decidere il grafo, verificare ogni passo, capire cosa sta succedendo.
 
 ### Cosa costruirai
 
@@ -42,7 +42,7 @@ La stessa rete lavora in due modalità: **risolvi**, che affronta un problema da
 
 * Un computer macOS o Linux. Su Windows usa [WSL](https://learn.microsoft.com/windows/wsl/install): il sistema limita tempo e memoria dei programmi con funzioni che esistono solo su Linux e macOS.
 * Python 3.10 o superiore.
-* Un account Google, per Antigravity CLI e per la chiave API di Gemini.
+* Un account Google, per la chiave API di Gemini e per Antigravity CLI. In alternativa ad Antigravity puoi usare Claude Code, che richiede un piano Claude a pagamento (Pro, Max, Team o Enterprise) o un account Console.
 * Circa un'ora e mezza. Il resto lo installi nel prossimo passo.
 * Facoltativo: un account su training.olinfo.it dedicato agli esperimenti, se vuoi inviare le soluzioni al grader ufficiale.
 
@@ -113,7 +113,7 @@ In ADK 2.0 un sistema multi-agente è un grafo. Ogni **nodo** è un agente LLM o
 ## Installa gli strumenti
 Duration: 0:08:00
 
-Servono tre cose: Python, Antigravity CLI e una chiave API di Gemini. Le installi una volta sola, poi valgono per tutti i progetti.
+Servono tre cose: Python, un agente di programmazione da terminale e una chiave API di Gemini. Le installi una volta sola, poi valgono per tutti i progetti.
 
 ### Python
 
@@ -125,9 +125,13 @@ python3 --version
 
 Serve 3.10 o superiore. Se manca o è più vecchio, installalo da [python.org](https://www.python.org/downloads/) o con il gestore di pacchetti del tuo sistema.
 
-### Antigravity CLI
+### L'agente di programmazione
 
-Antigravity CLI è l'agente di programmazione che scriverà il codice al posto tuo. Si installa con un comando:
+È lui che scriverà il codice al posto tuo. Il codelab è pensato per Antigravity CLI, ma funziona allo stesso modo con Claude Code: scegline uno.
+
+#### Antigravity CLI
+
+Si installa con un comando:
 
 ```console
 curl -fsSL https://antigravity.google/cli/install.sh | bash
@@ -141,6 +145,17 @@ export PATH="$HOME/.local/bin:$PATH"
 
 Al primo avvio `agy` apre il browser per l'accesso con il tuo account Google. Dettagli e alternative nella [guida all'installazione](https://antigravity.google/docs/cli/install/).
 
+#### In alternativa: Claude Code
+
+```console
+curl -fsSL https://claude.ai/install.sh | bash
+claude --version
+```
+
+Al primo avvio `claude` apre il browser per l'accesso. Serve un piano Claude a pagamento o un account Console: il piano gratuito di claude.ai non include Claude Code. Altri metodi di installazione, compreso Homebrew, nella [guida di Claude Code](https://code.claude.com/docs/en/setup).
+
+Claude Code legge da solo il file `AGENTS.md` del progetto (dalla versione 2.1.277). Con una versione più vecchia, crea nella cartella del progetto un file `CLAUDE.md` che contiene soltanto la riga `@AGENTS.md`.
+
 ### La chiave API di Gemini
 
 Gli agenti del sistema usano i modelli Gemini. Crea una chiave gratuita su [Google AI Studio](https://aistudio.google.com/app/apikey) e tienila a portata di mano: la metterai nel file `.env` tra poco.
@@ -153,6 +168,7 @@ La chiave è personale: non incollarla in chat, non pubblicarla e non caricarla 
 
 * [Installare ADK per Python](https://adk.dev/get-started/installation/) e la [guida rapida](https://adk.dev/get-started/python/)
 * [Antigravity CLI: installazione e accesso](https://antigravity.google/docs/cli/install/) e [tutorial](https://antigravity.google/docs/cli/tutorial/)
+* [Claude Code: installazione](https://code.claude.com/docs/en/setup) e [come usa AGENTS.md](https://code.claude.com/docs/en/memory)
 * [Usare i modelli Gemini con ADK](https://adk.dev/agents/models/google-gemini/)
 
 ## Prepara il progetto
@@ -213,13 +229,13 @@ Apri `.env` e sostituisci `la-tua-chiave` con la chiave di AI Studio. `adk web` 
 ```console
 GOOGLE_GENAI_USE_VERTEXAI=FALSE
 GOOGLE_API_KEY=la-tua-chiave
-FAST_MODEL=gemini-3.5-flash
-STRONG_MODEL=gemini-3.5-flash
+FAST_MODEL=gemini-3.8-flash
+STRONG_MODEL=gemini-3.8-flash
 # 1 = l'invio al sito è simulato; il download resta sempre reale
 OLINFO_DRY_RUN=1
 ```
 
-Se hai accesso a un modello più forte, mettilo in `STRONG_MODEL`: lo useranno il Reviewer e il Tutor.
+Il codelab usa `gemini-3.8-flash`, veloce ed economico ma già molto capace. Puoi mettere in `FAST_MODEL` e `STRONG_MODEL` qualsiasi [modello Gemini supportato](https://ai.google.dev/gemini-api/docs/models), scrivendo il suo codice esatto: `FAST_MODEL` serve agli agenti che devono rispondere in fretta (Reader, Solver rapido, Test author), `STRONG_MODEL` a quelli che ragionano di più (Reviewer e Tutor).
 
 ### Scegli il problema
 
@@ -253,16 +269,23 @@ In `meta.json` copia dalla pagina del task titolo, limiti e tipo di input/output
 
 Il downloader usa il fallback solo se il sito non risponde o se il PDF scaricato non è valido, e in chat dice da dove arrivano i dati. Il testo appartiene agli organizzatori delle Olimpiadi: tienilo nella tua copia locale e non pubblicarlo.
 
-### Configura agy
+### Configura l'agente di programmazione
 
-Con l'ambiente virtuale attivo, avvia agy dalla cartella del progetto:
+Con l'ambiente virtuale attivo, avvia l'agente dalla cartella del progetto: `agy` per Antigravity, `claude` per Claude Code.
 
-```console
-agy
-```
+Con Antigravity CLI:
 
 * Con `/model` scegli il modello più forte disponibile per il tuo account.
 * Con `/permissions` controlla cosa agy può fare da solo. Lascia che modifichi i file del progetto senza chiedere, ma tieni la conferma sui comandi che escono dalla sandbox: vedrai ogni comando prima che parta. I dettagli sono nella pagina sui [permessi](https://antigravity.google/docs/permissions/).
+
+Con Claude Code:
+
+* Con `/model` scegli il modello.
+* Con `Shift+Tab` passa alla modalità `accept edits`: Claude modifica i file senza chiedere, ma ti chiede conferma prima dei comandi. Le altre modalità sono descritte nella pagina sui [permessi](https://code.claude.com/docs/en/permission-modes).
+
+<aside class="positive">
+Nel resto del codelab scriviamo sempre «agy». Se usi Claude Code, i prompt sono identici: incollali in <code>claude</code>.
+</aside>
 
 ## Il file di contesto
 Duration: 0:05:00
@@ -326,7 +349,7 @@ Nodi LLM: reader, quick_solver, test_author, test_author_v, reviewer, tutor. Gli
 - Il Workflow copia gli Agent: non modificarli dopo averlo creato.
 - adk web: oii_solver/__init__.py con "from . import agent"; root_agent in agent.py.
   adk web --reload_agents ricarica gli agenti quando cambia il codice.
-- Modelli da .env: FAST_MODEL, STRONG_MODEL (default gemini-3.5-flash).
+- Modelli da .env: FAST_MODEL, STRONG_MODEL (default gemini-3.8-flash).
 
 ## API training.olinfo.it (non documentata, dal client @olinfo/training-api)
 POST JSON a https://training.olinfo.it/api/<endpoint> → {"success":1,...} o {"success":0,"error"}

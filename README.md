@@ -16,6 +16,8 @@ Ti servono macOS o Linux (su Windows, WSL), Python 3.10+ e una [chiave API di Ge
 curl -fsSL https://antigravity.google/cli/install.sh | bash
 ```
 
+In alternativa puoi usare [Claude Code](https://code.claude.com/docs/en/setup) (`curl -fsSL https://claude.ai/install.sh | bash`, richiede un piano Claude a pagamento): legge lo stesso `AGENTS.md` e i prompt del codelab sono identici.
+
 Poi prepara il progetto con lo starter kit e installa ADK in un ambiente virtuale:
 
 ```console
