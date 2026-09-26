@@ -1,0 +1,35 @@
+google-codelab-step img {
+  max-width: 100%;
+  max-height: 60vh;
+  height: auto;
+  cursor: zoom-in;
+}
+
+google-codelab-step pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.image-lightbox {
+  display: none;
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  padding: 24px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  cursor: zoom-out;
+}
+
+.image-lightbox.open {
+  display: flex;
+}
+
+.image-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}

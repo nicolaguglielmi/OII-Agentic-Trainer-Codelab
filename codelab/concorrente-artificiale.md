@@ -1,9 +1,10 @@
-author: [Nome Cognome]
+author: Nicola Guglielmi
 summary: Con ADK 2.0 e Antigravity CLI costruisci una rete di agenti che risolve problemi delle Olimpiadi Italiane di Informatica in Python, migliora le soluzioni un passo alla volta e insegna a migliorare il tuo codice.
 id: concorrente-artificiale-adk2
 categories: ai,agents,adk,antigravity,olimpiadi
 environments: Web
 status: Published
+feedback link: https://github.com/nicolaguglielmi/OII-Agentic-Trainer-Codelab/issues
 
 # Il concorrente artificiale: una rete di agenti con ADK 2.0
 
@@ -44,6 +45,14 @@ La stessa rete lavora in due modalità: **risolvi**, che affronta un problema da
 * Antigravity CLI (`agy`) installato e collegato al tuo account.
 * Una chiave API di Gemini (Google AI Studio) o un progetto Vertex AI.
 * Facoltativo: un account su training.olinfo.it dedicato agli esperimenti, se vuoi inviare le soluzioni al grader ufficiale.
+
+### I materiali
+
+Nel [repository del codelab](https://github.com/nicolaguglielmi/OII-Agentic-Trainer-Codelab) trovi:
+
+* le [slide della lectio](https://github.com/nicolaguglielmi/OII-Agentic-Trainer-Codelab/blob/main/slides/il-concorrente-artificiale.pdf) «Il concorrente artificiale», per ripassare i concetti;
+* la cartella `starter/`, con `AGENTS.md`, `CONTINUA.md` e un modello del file `.env`, per partire in un minuto;
+* la cartella `esempi/`, con due soluzioni di partenza per provare la modalità `valuta`.
 
 <aside class="positive">
 Il principio che guida tutto il codelab: <strong>gli LLM propongono, il codice giudica</strong>. Nessun agente decide da solo se una soluzione è corretta o veloce: lo decidono esempi, stress test e cronometro.
@@ -106,19 +115,28 @@ Duration: 0:06:00
 
 ### Crea la cartella del progetto
 
+Scarica il repository del codelab e crea accanto la cartella del progetto, con i file dello starter kit già al loro posto:
+
 ```console
-mkdir oii-solver && cd oii-solver
+git clone https://github.com/nicolaguglielmi/OII-Agentic-Trainer-Codelab.git
+mkdir oii-solver
+cp OII-Agentic-Trainer-Codelab/starter/AGENTS.md OII-Agentic-Trainer-Codelab/starter/CONTINUA.md oii-solver/
+cp OII-Agentic-Trainer-Codelab/starter/env.esempio oii-solver/.env
+cd oii-solver
 ```
 
-### Crea il file .env
+Senza git va bene lo stesso: dalla pagina del repository scegli **Code → Download ZIP** e copia a mano gli stessi file.
 
-Nella cartella crea un file `.env` con la tua chiave. `adk web` lo legge da solo all'avvio.
+### Completa il file .env
+
+Apri `.env` e inserisci la tua chiave. `adk web` lo legge da solo all'avvio. Il contenuto è questo:
 
 ```console
 GOOGLE_GENAI_USE_VERTEXAI=FALSE
 GOOGLE_API_KEY=la-tua-chiave
 FAST_MODEL=gemini-3.5-flash
 STRONG_MODEL=gemini-3.5-flash
+# 1 = l'invio al sito è simulato; il download resta sempre reale
 OLINFO_DRY_RUN=1
 ```
 
@@ -131,13 +149,30 @@ Apri la pagina dei problemi di training.olinfo.it (per anno, oppure Nazionali e 
 * **Input/output: stdin / stdout**;
 * tra gli allegati c'è un template **.py**. È il segnale che Python è ammesso: l'elenco dei linguaggi si vede solo dopo il login.
 
-Evita i task che richiedono un grader C/C++ senza un `grader.py`, e le Territoriali (`terry/`), che usano un altro sistema. Un esempio adatto: `ois_rockpaperscissors`.
+Evita i task che richiedono un grader C/C++ senza un `grader.py`, e le Territoriali (`terry/`), che usano un altro sistema. Un esempio adatto: `ois_rockpaperscissors`. Scrivi sempre il nome completo, prefisso compreso: `rockpaperscissors` da solo non esiste.
 
 Annota il nome: nel resto del codelab lo chiameremo `⟨task⟩`.
 
 <aside class="negative">
 I limiti di tempo delle OII sono tarati sul C++. In Python una soluzione con la complessità giusta può comunque sforare sui subtask più grandi. Per questo codelab è un vantaggio: vedrai il punteggio stimato salire versione dopo versione.
 </aside>
+
+### Prepara un fallback (consigliato)
+
+Il sito può cambiare o non rispondere proprio quando serve. Scarica a mano il PDF del testo dalla pagina del task e prepara questa cartella:
+
+```console
+fallback/<task>/testo.pdf
+fallback/<task>/meta.json
+```
+
+In `meta.json` copia dalla pagina del task titolo, limiti e tipo di input/output:
+
+```json
+{"titolo": "...", "time_limit": 2, "memory_limit_mb": 256, "io": "stdin/stdout"}
+```
+
+Il downloader usa il fallback solo se il sito non risponde o se il PDF scaricato non è valido, e in chat dice da dove arrivano i dati. Il testo appartiene agli organizzatori delle Olimpiadi: tienilo nella tua copia locale e non pubblicarlo.
 
 ### Configura agy
 
@@ -154,7 +189,7 @@ I modelli conoscono soprattutto la versione 1.x di ADK, basata su `SequentialAge
 
 Il file `AGENTS.md` nella radice del progetto risolve il problema: Antigravity lo legge all'avvio di ogni sessione. Contiene il grafo da costruire, le API di ADK 2.x verificate su una versione reale, l'API del sito delle Olimpiadi e le regole del gioco.
 
-Crea `AGENTS.md` con questo contenuto:
+Se hai copiato lo starter kit, `AGENTS.md` è già nella cartella: leggilo con calma, è la mappa di tutto il codelab. Altrimenti crealo con questo contenuto:
 
 ```markdown
 # Progetto: oii-solver (ADK 2.x, Python)
@@ -185,6 +220,10 @@ Nodi LLM: reader, quick_solver, test_author, test_author_v, reviewer, tutor. Gli
 - state["best"] = la versione corretta con il punteggio stimato più alto.
 - work/<task>/: testo e allegati scaricati; work/<task>/testkit.json: test condivisi.
 - work/<task>/<modalità>/: v<N>.py, tabellone.json, guida.md, report.html.
+- work/<task>/meta.json: scritto solo dopo un download riuscito, con l'origine ("sito" o
+  "fallback"); senza meta.json la cache non vale.
+- fallback/<task>/: testo.pdf e meta.json preparati a mano, usati solo se il sito non
+  risponde o il PDF scaricato non è valido.
 
 ## API ADK 2.x (verificate su 2.9.2)
 - from google.adk import Agent, Event, Workflow
@@ -209,7 +248,9 @@ Nodi LLM: reader, quick_solver, test_author, test_author_v, reviewer, tutor. Gli
 POST JSON a https://training.olinfo.it/api/<endpoint> → {"success":1,...} o {"success":0,"error"}
 - task {action:"get", name} → title, task_type, time_limit (s), memory_limit (byte),
   statements {lingua: digest}, attachments [[nome, digest]], submission_format, supported_languages
-- GET /api/files/<digest>/<nome> → file
+- File e allegati: https://training.olinfo.it/files/<digest>/<nome>
+- Pagina pubblica https://training.olinfo.it/task/<nome>: titolo, limiti, input/output, allegati.
+  Se l'API non risponde, leggi i dati da qui. I linguaggi ammessi si vedono solo dopo il login.
 - user {action:"login", username, password, keep_signed:false} → cookie training_token
 - submission {action:"new", task_name, files:{<formato>:{data:base64, filename, language}}} → id
 - submission {action:"details", id} → compilation_outcome, evaluation_outcome, score, score_details
@@ -220,8 +261,13 @@ POST JSON a https://training.olinfo.it/api/<endpoint> → {"success":1,...} o {"
   (sys.stdin.buffer per leggere in fretta).
 - Esecuzione: pypy3 se installato e ammesso dal task, altrimenti python3; sempre in una
   cartella temporanea con limiti di tempo, memoria e dimensione file (resource.setrlimit). Mai come root.
-- Task adatti: Batch, Python tra i supported_languages, nessun grader C/C++ obbligatorio.
+- Task adatti: input/output su stdin/stdout, template .py tra gli allegati, nessun grader C/C++ obbligatorio.
 - Confronto output a token (split()).
+- OLINFO_DRY_RUN riguarda solo l'invio. Il download usa sempre dati reali: sito, poi fallback/<task>/.
+- Mai dati finti o segnaposto fuori da tests/: le prove usano cartelle temporanee. Se mancano
+  i dati veri, fermati e dillo.
+- Ogni route emessa da un nodo deve avere il suo arco: una route senza arco ferma il ramo.
+- Nelle fasi lunghe (stress test, benchmark, Reviewer) scrivi in chat messaggi di avanzamento.
 - Ogni passo finisce con una verifica veloce.
 - Tutto in italiano: messaggi, prompt, commenti.
 ```
@@ -251,6 +297,8 @@ Apri `http://localhost:8000`, scegli `oii_solver` e usa una **nuova sessione** p
 
 ![Come organizzare lo schermo: agy nel primo terminale, adk web nel secondo, il browser accanto](img/schermo.png)
 
+Nella vista a grafo di `adk web` vedi il workflow com'è davvero: il nodo attivo è evidenziato e sugli archi dei cicli compare il numero di giri. Se il grafo sembra fermo su `ask_approval`, sta aspettando la tua risposta.
+
 ### Il grafo, passo dopo passo
 
 All'inizio di ogni passo trovi il grafo com'è dopo quel passo: **in blu** i nodi che aggiungi, pieni quelli già costruiti, **grigi e tratteggiati** quelli che arriveranno.
@@ -275,7 +323,7 @@ Il primo nodo del grafo non è intelligente, ed è voluto: è una funzione Pytho
 Incolla in agy:
 
 ```console
-Segui AGENTS.md. Crea il progetto: pacchetto oii_solver per adk web, requirements.txt, .env.example con GOOGLE_API_KEY, FAST_MODEL, STRONG_MODEL, MAX_STEPS=4, MAX_FIX=3, STRESS_ITERS=60, OLINFO_DRY_RUN=1, OLINFO_USERNAME, OLINFO_PASSWORD (questi ultimi due vuoti: servono solo per l'invio reale al passo 8). Non toccare il file .env: esiste già.
+Segui AGENTS.md. Crea il progetto: pacchetto oii_solver per adk web, requirements.txt, .env.example con GOOGLE_API_KEY, FAST_MODEL, STRONG_MODEL, MAX_STEPS=4, MAX_FIX=3, STRESS_ITERS=60, OLINFO_DRY_RUN=1, OLINFO_USERNAME e OLINFO_PASSWORD vuoti. Non toccare il file .env: esiste già.
 Primo nodo: intake. Capisce la modalità dal messaggio: "risolvi <task>" oppure "valuta <task>" con il codice dello studente incollato in un blocco python o allegato come file .py. Gestisci node_input sia come testo sia come Content con parti inline. Salva modalità, task ed eventuale codice nello stato e rispondi con un riepilogo.
 Verifica con python -c "from oii_solver.agent import root_agent".
 ```
@@ -291,27 +339,28 @@ Duration: 0:05:00
 
 Il Downloader scarica il testo in PDF e gli allegati, e riconosce gli esempi. Il PDF passa al modello così com'è: Gemini legge formule e figure senza bisogno di estrarre il testo.
 
-Il sito non documenta la sua API e può cambiarla: infatti, verificata dal vivo, l'API JSON di AGENTS.md non risponde più su nessun endpoint (il sito è stato riscritto). Il Downloader se ne accorge da solo — un 404 sulla rotta, non un errore applicativo — e ripiega sulla pagina pubblica del task, leggendo titolo, limiti e allegati direttamente dall'HTML. Solo il download dei file resta all'indirizzo pubblico, senza il prefisso `/api`. Se anche il sito non risponde, un'ultima riserva locale in `fallback/⟨task⟩/` permette di continuare l'esercizio offline. Si ferma solo se il task non è adatto, e riusa i file già scaricati: meno attese, meno dipendenza dalla rete.
+Il sito non documenta la sua API e può cambiarla: il Downloader prova prima l'API, poi la pagina pubblica del task, e come ultima risorsa il fallback locale. Controlla che il PDF sia vero prima di passarlo al Reader, e riusa i file già scaricati solo se il download precedente è riuscito davvero. Soprattutto, non inventa mai dati: se non trova il testo, si ferma e lo dice.
 
 Incolla in agy:
 
 ```console
-Scrivi oii_solver/olinfo.py con il client dell'API descritta in AGENTS.md e il nodo download_task. Prova prima l'API JSON; solo se un endpoint risponde 404 (rotta inesistente, non un errore applicativo {success:0}) ripiega sulla pagina pubblica https://training.olinfo.it/task/<task>: da lì leggi titolo, limiti di tempo e memoria, tipo di input/output, punteggio massimo e i link degli allegati. In entrambi i casi i file (testo e allegati) si scaricano da https://training.olinfo.it/files/<digest>/<nome>, senza il prefisso /api. Per il testo cerca nell'HTML il link al PDF, o i dati JSON che la pagina incorpora.
-Scarica testo.pdf (italiano, altrimenti inglese) e gli allegati in work/<task>/, estraendo gli zip, e trova gli esempi input/output negli allegati. Valida il PDF con PyMuPDF (fitz): deve iniziare con %PDF- e avere almeno una pagina, altrimenti il download non è andato a buon fine. Se work/<task>/meta.json esiste e il PDF è valido, riusa tutto senza riscaricare.
-Se il sito non risponde o non restituisce dati sufficienti (né limiti né allegati), e non è già tutto in cache, ripiega su una riserva locale in fallback/<task>/ (testo.pdf e meta.json con titolo, limiti, tipo di input/output), se presente; altrimenti fermati con un messaggio chiaro.
-I linguaggi ammessi si vedono solo dopo il login: considera Python ammesso se tra gli allegati c'è un template .py (il nome breve del task, oppure grader/manager/stub), altrimenti scrivi "Python: da verificare all'invio" e continua. Fermati con un messaggio chiaro solo se l'input/output non è stdin/stdout o se serve un grader C/C++ senza un grader.py. Aggiungi pymupdf a requirements.txt. Passa al nodo dopo un Content con il PDF e i sorgenti allegati. Prova su <task>.
+Scrivi oii_solver/olinfo.py con il client dell'API descritta in AGENTS.md e il nodo download_task. Prova prima l'API JSON; se non risponde o dà errore, usa la pagina pubblica https://training.olinfo.it/task/<task>: da lì leggi titolo, limiti di tempo e memoria, tipo di input/output, punteggio massimo e i link degli allegati (https://training.olinfo.it/files/<digest>/<nome>). Per il testo cerca nell'HTML il link al PDF, o i dati JSON che la pagina incorpora.
+Scarica testo.pdf (italiano, altrimenti inglese) e gli allegati in work/<task>/, estraendo gli zip, e trova gli esempi input/output negli allegati. La cache vale solo se esiste work/<task>/meta.json, scritto alla fine di un download riuscito con l'origine dei dati ("sito" o "fallback").
+Controlla che testo.pdf sia un PDF vero (inizia con %PDF e ha almeno una pagina). Se il sito non risponde o il PDF non è valido, usa fallback/<task>/testo.pdf e fallback/<task>/meta.json, se esistono; meta.json ha le chiavi titolo, time_limit (secondi), memory_limit_mb e io. Mai dati finti in work/.
+Se il task non esiste né sul sito né in fallback/, prova i prefissi ois_, oii_ e preoii_: se uno esiste, rispondi "Forse intendevi ...?" senza procedere.
+I linguaggi ammessi si vedono solo dopo il login: considera Python ammesso se tra gli allegati c'è un template .py, altrimenti scrivi "Python: da verificare all'invio" e continua. Fermati con un messaggio chiaro solo se l'input/output non è stdin/stdout o se serve un grader C/C++ senza un grader.py. Passa al nodo dopo un Content con il PDF e i sorgenti allegati. Prova su <task>; se la tua sandbox non raggiunge il sito, non inventare dati: dimmelo e lo provo io.
 ```
 
 ### Verifica
 
-In una nuova sessione scrivi `risolvi ⟨task⟩`: compaiono titolo, limiti di tempo e memoria, allegati ed esempi trovati.
+In una nuova sessione scrivi `risolvi ⟨task⟩`: compaiono titolo, limiti di tempo e memoria, allegati, esempi trovati e l'origine dei dati (sito o fallback). Il PDF in `work/⟨task⟩/` deve pesare decine di KB, non pochi byte.
 
 <aside class="negative">
 In Linux agy esegue i comandi in una sandbox. Se la prova del downloader non raggiunge training.olinfo.it, lancia tu il test nel secondo terminale.
 </aside>
 
-<aside class="positive">
-Se il sito non risponde nemmeno a te, o vuoi lavorare offline, crea a mano <code>fallback/⟨task⟩/meta.json</code> (titolo, <code>time_limit</code>, <code>memory_limit_mb</code>, <code>input_output</code>) e <code>fallback/⟨task⟩/testo.pdf</code>: il Downloader li userà come ultima riserva, senza mai sostituire un sito che funziona.
+<aside class="negative">
+Se più avanti il Reader risponde <code>400 INVALID_ARGUMENT</code>, quasi sempre ha ricevuto un PDF non valido, per esempio dati di prova finiti in <code>work/</code>. Cancella <code>work/⟨task⟩/</code> e riscarica.
 </aside>
 
 ## Passo 3 · Reader
@@ -376,6 +425,7 @@ Incolla in agy:
 Scrivi oii_solver/judge.py, senza LLM: esegue un programma Python in una cartella temporanea con i limiti di AGENTS.md e confronta gli output a token.
 Sostituisci il nodo provvisorio con test_runner: prova il candidato sugli esempi, poi su STRESS_ITERS input casuali contro la brute force (solo se la brute passa gli esempi). test_runner usa work/<task>/testkit.json se esiste; altrimenti salva lì il TestKit appena prodotto.
 Se il candidato sbaglia, tieni il controesempio più corto, registralo in history, salva il motivo in state["rework_reason"] = "fix" e fai route "rework"; per ora collega "rework" a un nodo che mostra il controesempio. Se è corretto, salva work/<task>/<modalità>/v1.py e scrivi "v1 corretta" con i secondi trascorsi dall'inizio.
+Esegui lo stress test in parallelo, fino a 4 processi, con timeout pari al time limit, e scrivi in chat l'avanzamento ("stress test 20/60").
 Verifica judge.py su un problema giocattolo (somma di N numeri): una soluzione giusta e una sbagliata.
 ```
 
@@ -398,7 +448,7 @@ Incolla in agy:
 
 ```console
 Estendi test_runner con il benchmark: per ogni subtask genera l'input con subtask_gen_code e misura il tempo del candidato contro il time limit del task. Un subtask passa se sta nel limite; il punteggio stimato è la somma dei punti dei subtask che passano.
-Tieni in stato history e best come in AGENTS.md. Mostra in chat il tabellone: versione, titolo, complessità, tempo per subtask con ✓ o ✗, punteggio stimato. Verifica con un import.
+Tieni in stato history e best come in AGENTS.md. Mostra in chat l'avanzamento ("benchmark ST3") e poi il tabellone: versione, titolo, complessità, tempo per subtask con ✓ o ✗, punteggio stimato. Se il Reader non ha estratto subtask, scrivi "stima non disponibile" invece di 0. Verifica con un import.
 ```
 
 ### Verifica
@@ -437,7 +487,7 @@ Un agente che agisce nel mondo reale deve chiedere il permesso. `RequestInput` m
 Incolla in agy:
 
 ```console
-Sostituisci il nodo finale di "done_solve" con il cancello umano: ask_approval fa RequestInput con il tabellone e chiede di scrivere «invia»; se la risposta è esattamente «invia» (a meno di spazi e maiuscole) vai a submit, altrimenti a stop.
+Sostituisci il nodo finale di "done_solve" con il cancello umano: ask_approval fa RequestInput con il tabellone e chiede di scrivere «invia»; se la risposta lo contiene vai a submit, altrimenti a stop.
 submit: con OLINFO_DRY_RUN=1 simula soltanto. Altrimenti fa login con le credenziali in .env e legge i linguaggi ammessi, visibili solo dopo il login: se Python non c'è, si ferma e lo dice; se c'è, invia la versione best, in PyPy se ammesso, altrimenti Python 3. Attende l'esito e mostra, per ogni subtask, il punteggio ufficiale accanto a quello stimato. Verifica con un import.
 ```
 
@@ -475,7 +525,7 @@ In una nuova sessione scrivi `valuta ⟨task⟩` e allega il tuo file `.py`, opp
 ![Esempio illustrativo di guida.md: review del codice e passi verificati](img/guida.png)
 
 <aside class="positive">
-Non hai una tua soluzione? Usa la <code>v1.py</code> prodotta dal passo 7: è corretta ma lenta, perfetta per vedere la guida all'opera. Per vedere anche una correzione, introduci un bug su un caso limite.
+Non hai una tua soluzione? Per <code>ois_rockpaperscissors</code> il repository contiene, in <code>esempi/ois_rockpaperscissors/</code>, due soluzioni di partenza: <code>lenta.py</code>, corretta ma esponenziale, e <code>lenta_con_bug.py</code>, che sbaglia il caso con un solo giocatore. Per altri task usa la <code>v1.py</code> prodotta da <code>risolvi</code>: è corretta ma lenta.
 </aside>
 
 ## Passo 10 · La vista visiva
@@ -485,10 +535,10 @@ Duration: 0:05:00
 
 La guida in testo dice cosa cambiare; la vista visiva lo mostra. Il nodo `render_report`, senza LLM, costruisce una pagina HTML con:
 
-* il grafico dei tempi per subtask della versione finale, con la linea del limite di tempo;
+* il grafico dei tempi per subtask di ogni versione, con la linea del limite di tempo;
 * il diff affiancato tra una versione e la successiva, generato da `difflib.HtmlDiff` della libreria standard;
 * i controesempi delle correzioni;
-* accanto a ogni diff, il `why` registrato con quella versione: il motivo che ha spinto Solver rapido, Test author o Reviewer a scriverla così.
+* la spiegazione del Tutor accanto a ogni diff.
 
 Il diff non lo scrive il modello: è la differenza reale tra due versioni che hanno superato i test.
 
@@ -499,16 +549,36 @@ Incolla in agy:
 ```console
 Estendi render_report, sempre senza LLM. Oltre a guida.md scrive in work/<task>/<modalità>/ report.html, una pagina unica senza dipendenze esterne, con:
 1) intestazione con task, punteggio stimato iniziale e finale;
-2) grafico SVG dei tempi per subtask della versione finale (best), con la linea del time limit e ✓/✗;
-3) per ogni passo: il why registrato con quella versione, diff affiancato tra versione precedente e nuova fatto con difflib.HtmlDiff (solo righe cambiate, 3 di contesto), risultato misurato;
+2) grafico SVG dei tempi per subtask di ogni versione, con la linea del time limit e ✓/✗;
+3) per ogni passo: spiegazione del tutor, diff affiancato tra versione precedente e nuova fatto con difflib.HtmlDiff (solo righe cambiate, 3 di contesto), risultato misurato;
 4) per le correzioni, il controesempio: input, output atteso, output ottenuto;
-5) la soluzione finale chiusa in un <details> con intestazione "Soluzione finale (v<N>)".
-Collega anche submit e stop a render_report. In chat mostra il percorso di report.html. Verifica generando il report dalla storia di un'esecuzione precedente.
+5) la soluzione finale chiusa in un <details> "guardala dopo averci provato".
+Collega anche submit e stop a render_report: in modalità risolvi usa il why del reviewer al posto della spiegazione del tutor. In chat mostra il percorso di report.html. Verifica generando il report dalla storia di un'esecuzione precedente.
 ```
 
 ### Verifica
 
 Apri nel browser il file `report.html` indicato in chat. Scorri i passi: per ognuno vedi cosa è cambiato nel codice e come sono cambiati i tempi.
+
+## Collaudo senza rete
+Duration: 0:05:00
+
+Prima di considerare finito il lavoro, verifica tutto il sistema in pochi secondi, senza rete e senza chiamate al modello. Gli agenti vengono sostituiti da modelli finti con risposte scritte in anticipo, e il download da dati costruiti in una cartella temporanea. I dati finti vivono solo qui, nei test.
+
+Incolla in agy:
+
+```console
+Scrivi tests/smoke_test.py, che esegue tutto il grafo senza rete e senza chiamate al modello:
+- una classe Scripted(BaseLlm) (google.adk.models.base_llm) il cui generate_content_async fa yield di LlmResponse(content=types.Content(role="model", parts=[types.Part(text=json_scriptato)]));
+- il Workflow copia gli agenti: sostituisci node.model sui nodi di root_agent.graph.nodes, cercandoli per nome;
+- Runner(app_name="oii", node=root_agent, session_service=InMemorySessionService()) da google.adk, con download_task sostituito da dati costruiti in una cartella temporanea;
+- la ripresa dopo RequestInput con create_request_input_response(interrupt_id, {"result": "invia"}) da google.adk.workflow.utils._workflow_hitl_utils.
+Problema giocattolo: somma di N numeri. La v1 ha un bug che lo stress test deve trovare, il reviewer lo corregge, poi approvazione e invio simulato. Un secondo giro in modalità valuta deve produrre guida.md e report.html. Nessun file in work/.
+```
+
+### Verifica
+
+`python tests/smoke_test.py` termina senza errori in pochi secondi. Rilancialo dopo ogni modifica al progetto.
 
 ## Se qualcosa va storto
 Duration: 0:03:00
@@ -531,6 +601,10 @@ cd .. && rm -rf oii-solver && cp -r ~/snapshot/passo-N oii-solver && cd oii-solv
 
 Riapri agy e scrivi: «Ho ripristinato il progetto al passo N: rileggi i file e continuiamo dal passo N+1.»
 
+### Riprendere da dove eri
+
+Se il lavoro si interrompe a metà, assicurati che `CONTINUA.md` sia nella cartella del progetto (è nello starter kit) e scrivi ad agy «Segui CONTINUA.md». Il file fa controllare ad agy lo stato reale del codice, tiene traccia dei passi in `PROGRESS.md` e riparte dal primo non completato. Se si interrompe di nuovo, basta ripetere la stessa frase.
+
 ### Altri problemi comuni
 
 * **adk web non vede le modifiche:** riavvialo nel secondo terminale.
@@ -538,13 +612,18 @@ Riapri agy e scrivi: «Ho ripristinato il progetto al passo N: rileggi i file e 
 * **Il downloader non trova testo o allegati:** il sito può essere cambiato. Con il prompt jolly chiedi ad agy di aprire la pagina pubblica del task e di adattare il parser.
 * **Il ciclo del Reviewer non migliora il punteggio:** prova un modello più forte in `STRONG_MODEL`, oppure aumenta `MAX_STEPS`.
 * **La brute force è troppo lenta anche sugli input piccoli:** chiedi al Test author di ridurre la dimensione degli input di `gen_code`.
+* **Task non trovato:** usa il nome completo con il prefisso, per esempio `ois_rockpaperscissors`.
+* **Il Reader risponde 400 INVALID_ARGUMENT:** ha ricevuto un PDF non valido. Cancella `work/⟨task⟩/` e riscarica.
+* **Stima "-" o 0 su tutte le versioni:** il Reader non ha estratto subtask, oppure non ha ricevuto il testo vero. Controlla l'origine dei dati in `work/⟨task⟩/meta.json`.
+* **Versioni che parlano di un altro problema:** qualche dato di prova è finito fuori da `tests/`, oppure `OLINFO_DRY_RUN` tocca anche il download. Correggi con il prompt jolly citando le regole di `AGENTS.md`.
+* **Il giro completo sembra fermo:** guarda la vista a grafo di `adk web`. Se il nodo attivo è `ask_approval`, il sistema aspetta la tua risposta.
 
 ## Complimenti
 Duration: 0:02:00
 
 ![La rete di agenti completa](img/grafo.png)
 
-Hai costruito una rete di dieci nodi che risolve problemi reali delle Olimpiadi e insegna a migliorare il codice, senza scrivere a mano una riga del sistema.
+Hai costruito una rete di agenti che risolve problemi reali delle Olimpiadi e insegna a migliorare il codice, senza scrivere a mano una riga del sistema.
 
 ### Cosa hai imparato
 
@@ -553,6 +632,7 @@ Hai costruito una rete di dieci nodi che risolve problemi reali delle Olimpiadi 
 * Due agenti indipendenti si controllano a vicenda meglio di uno solo.
 * Un buon ciclo di miglioramento cambia una cosa alla volta e la misura.
 * Prima di agire nel mondo, un agente chiede il permesso.
+* I dati di prova restano nei test: un sistema che si ferma e lo dice vale più di uno che inventa dati quando la rete manca.
 
 ### Prossimi passi
 
