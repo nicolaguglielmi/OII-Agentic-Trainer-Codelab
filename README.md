@@ -1,6 +1,6 @@
 # OII Agentic Trainer — Codelab «Il concorrente artificiale»
 
-**▶ Segui il codelab:** [PAGES_URL](PAGES_URL)
+**▶ Segui il codelab:** [https://nicolaguglielmi.github.io/OII-Agentic-Trainer-Codelab/](https://nicolaguglielmi.github.io/OII-Agentic-Trainer-Codelab/)
 
 ## Contenuto
 
