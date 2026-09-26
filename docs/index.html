@@ -17,6 +17,35 @@
     .error {
       color: red;
     }
+    .image-container img {
+      max-width: 100%;
+      max-height: 70vh;
+      width: auto;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      cursor: zoom-in;
+    }
+    .image-lightbox {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      cursor: zoom-out;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    .image-lightbox.open {
+      display: flex;
+    }
+    .image-lightbox img {
+      max-width: 100%;
+      max-height: 100%;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    }
   </style>
 </head>
 <body>
@@ -477,6 +506,33 @@ Collega anche submit e stop a render_report: in modalità risolvi usa il why del
   <script src="https://storage.googleapis.com/claat-public/prettify.js"></script>
   <script src="https://storage.googleapis.com/claat-public/codelab-elements.js"></script>
   <script src="//support.google.com/inapp/api.js"></script>
+
+  <div class="image-lightbox" id="image-lightbox">
+    <img id="image-lightbox-img" src="" alt="">
+  </div>
+  <script>
+    (function () {
+      var lightbox = document.getElementById('image-lightbox');
+      var lightboxImg = document.getElementById('image-lightbox-img');
+
+      document.addEventListener('click', function (event) {
+        var img = event.target.closest('.image-container img');
+        if (img) {
+          lightboxImg.src = img.src;
+          lightboxImg.alt = img.alt;
+          lightbox.classList.add('open');
+        } else if (event.target === lightbox) {
+          lightbox.classList.remove('open');
+        }
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          lightbox.classList.remove('open');
+        }
+      });
+    })();
+  </script>
 
 </body>
 </html>
