@@ -1,7 +1,7 @@
 # Progetto: oii-solver (ADK 2.x, Python)
 Rete di agenti che risolve problemi OII di training.olinfo.it in Python e insegna a
-migliorare il codice. Gira sulla macchina host: google-adk>=2.9 e Python sono già
-installati. Non installare nulla.
+migliorare il codice. Gira sulla macchina host, nell'ambiente virtuale .venv già attivo:
+google-adk>=2.9, requests, python-dotenv e pymupdf sono già installati. Non installare nulla.
 
 ## Due modalità, un grafo
 - risolvi <task>: prima una v1 semplice e corretta, poi il Reviewer la migliora un passo alla volta.

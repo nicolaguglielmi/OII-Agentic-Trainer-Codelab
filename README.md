@@ -10,7 +10,13 @@ Costruisci a casa, un prompt alla volta, una rete di agenti con [ADK 2.0](https:
 
 ## Partenza rapida
 
-Ti servono Python 3.10+, `google-adk` 2.9+, Antigravity CLI (`agy`) e una chiave API di Gemini. Poi:
+Ti servono macOS o Linux (su Windows, WSL), Python 3.10+ e una [chiave API di Gemini](https://aistudio.google.com/app/apikey). Installa [Antigravity CLI](https://antigravity.google/docs/cli/install/):
+
+```console
+curl -fsSL https://antigravity.google/cli/install.sh | bash
+```
+
+Poi prepara il progetto con lo starter kit e installa ADK in un ambiente virtuale:
 
 ```console
 git clone https://github.com/nicolaguglielmi/OII-Agentic-Trainer-Codelab.git
@@ -18,9 +24,12 @@ mkdir oii-solver
 cp OII-Agentic-Trainer-Codelab/starter/AGENTS.md OII-Agentic-Trainer-Codelab/starter/CONTINUA.md oii-solver/
 cp OII-Agentic-Trainer-Codelab/starter/env.esempio oii-solver/.env
 cd oii-solver
+python3 -m venv .venv
+source .venv/bin/activate
+pip install "google-adk>=2.9" requests python-dotenv pymupdf
 ```
 
-Metti la tua chiave in `.env`, avvia `agy` nella cartella e segui il codelab dal passo «Prepara l'ambiente». Se il lavoro si interrompe, scrivi ad agy «Segui CONTINUA.md»: riparte dal primo passo non completato.
+Metti la tua chiave in `.env`, avvia `agy` nella cartella con l'ambiente virtuale attivo e segui il codelab dal passo «Prepara il progetto». Se il lavoro si interrompe, scrivi ad agy «Segui CONTINUA.md»: riparte dal primo passo non completato.
 
 ## Cosa costruirai
 

@@ -40,10 +40,10 @@ La stessa rete lavora in due modalità: **risolvi**, che affronta un problema da
 
 ### Cosa ti serve
 
-* Un computer Linux o macOS con Python 3.10 o superiore.
-* `google-adk` 2.9 o superiore già installato.
-* Antigravity CLI (`agy`) installato e collegato al tuo account.
-* Una chiave API di Gemini (Google AI Studio) o un progetto Vertex AI.
+* Un computer macOS o Linux. Su Windows usa [WSL](https://learn.microsoft.com/windows/wsl/install): il sistema limita tempo e memoria dei programmi con funzioni che esistono solo su Linux e macOS.
+* Python 3.10 o superiore.
+* Un account Google, per Antigravity CLI e per la chiave API di Gemini.
+* Circa un'ora e mezza. Il resto lo installi nel prossimo passo.
 * Facoltativo: un account su training.olinfo.it dedicato agli esperimenti, se vuoi inviare le soluzioni al grader ufficiale.
 
 ### I materiali
@@ -110,10 +110,55 @@ Corretta non basta: quanto vale? Per ogni subtask si genera l'input più grande 
 
 In ADK 2.0 un sistema multi-agente è un grafo. Ogni **nodo** è un agente LLM oppure una semplice funzione Python; gli **archi** dicono chi viene dopo chi; le **route** sono archi condizionali; un **ciclo** è un arco che torna indietro. Il principio del codelab: gli LLM propongono, il codice giudica.
 
-## Prepara l'ambiente
-Duration: 0:06:00
+## Installa gli strumenti
+Duration: 0:08:00
 
-### Crea la cartella del progetto
+Servono tre cose: Python, Antigravity CLI e una chiave API di Gemini. Le installi una volta sola, poi valgono per tutti i progetti.
+
+### Python
+
+Controlla la versione:
+
+```console
+python3 --version
+```
+
+Serve 3.10 o superiore. Se manca o è più vecchio, installalo da [python.org](https://www.python.org/downloads/) o con il gestore di pacchetti del tuo sistema.
+
+### Antigravity CLI
+
+Antigravity CLI è l'agente di programmazione che scriverà il codice al posto tuo. Si installa con un comando:
+
+```console
+curl -fsSL https://antigravity.google/cli/install.sh | bash
+```
+
+Il comando si chiama `agy` e finisce in `~/.local/bin`. Se il terminale non lo trova, aprine uno nuovo oppure aggiungi la cartella al `PATH`:
+
+```console
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Al primo avvio `agy` apre il browser per l'accesso con il tuo account Google. Dettagli e alternative nella [guida all'installazione](https://antigravity.google/docs/cli/install/).
+
+### La chiave API di Gemini
+
+Gli agenti del sistema usano i modelli Gemini. Crea una chiave gratuita su [Google AI Studio](https://aistudio.google.com/app/apikey) e tienila a portata di mano: la metterai nel file `.env` tra poco.
+
+<aside class="negative">
+La chiave è personale: non incollarla in chat, non pubblicarla e non caricarla su GitHub. Il file <code>.env</code> che la contiene resta solo sul tuo computer.
+</aside>
+
+### Per approfondire
+
+* [Installare ADK per Python](https://adk.dev/get-started/installation/) e la [guida rapida](https://adk.dev/get-started/python/)
+* [Antigravity CLI: installazione e accesso](https://antigravity.google/docs/cli/install/) e [tutorial](https://antigravity.google/docs/cli/tutorial/)
+* [Usare i modelli Gemini con ADK](https://adk.dev/agents/models/google-gemini/)
+
+## Prepara il progetto
+Duration: 0:08:00
+
+### Scarica lo starter kit
 
 Scarica il repository del codelab e crea accanto la cartella del progetto, con i file dello starter kit già al loro posto:
 
@@ -127,9 +172,43 @@ cd oii-solver
 
 Senza git va bene lo stesso: dalla pagina del repository scegli **Code → Download ZIP** e copia a mano gli stessi file.
 
+### Crea l'ambiente virtuale e installa ADK
+
+Un ambiente virtuale tiene le librerie del progetto separate da quelle del sistema. Crealo nella cartella del progetto e installa ADK insieme alle tre librerie che userà il Downloader:
+
+```console
+python3 -m venv .venv
+source .venv/bin/activate
+pip install "google-adk>=2.9" requests python-dotenv pymupdf
+```
+
+Verifica:
+
+```console
+adk --version
+```
+
+Deve rispondere con una versione 2.9 o successiva.
+
+### Tieni traccia dei passi con git
+
+Dopo ogni passo riuscito salverai il progetto con un commit, così potrai sempre tornare all'ultimo punto che funzionava. Prepara il repository locale, escludendo ambiente virtuale, chiave e file di lavoro:
+
+```console
+git init
+printf '.venv/\n.env\nwork/\nfallback/\n__pycache__/\n' > .gitignore
+git add -A && git commit -m "starter kit"
+```
+
+Il repository resta sul tuo computer: non serve pubblicarlo.
+
+<aside class="positive">
+Attiva l'ambiente virtuale con <code>source .venv/bin/activate</code> in <strong>ogni</strong> terminale che apri per il progetto, prima di avviare <code>agy</code> o <code>adk web</code>. Così agy esegue le sue verifiche con le librerie giuste. Il prompt del terminale mostra <code>(.venv)</code> quando l'ambiente è attivo.
+</aside>
+
 ### Completa il file .env
 
-Apri `.env` e inserisci la tua chiave. `adk web` lo legge da solo all'avvio. Il contenuto è questo:
+Apri `.env` e sostituisci `la-tua-chiave` con la chiave di AI Studio. `adk web` legge il file da solo all'avvio. Il contenuto è questo:
 
 ```console
 GOOGLE_GENAI_USE_VERTEXAI=FALSE
@@ -176,9 +255,14 @@ Il downloader usa il fallback solo se il sito non risponde o se il PDF scaricato
 
 ### Configura agy
 
-* Avvia `agy` dalla cartella del progetto.
+Con l'ambiente virtuale attivo, avvia agy dalla cartella del progetto:
+
+```console
+agy
+```
+
 * Con `/model` scegli il modello più forte disponibile per il tuo account.
-* Imposta l'approvazione automatica delle modifiche ai file e lascia la conferma sui comandi shell: vedrai ogni comando prima che parta.
+* Con `/permissions` controlla cosa agy può fare da solo. Lascia che modifichi i file del progetto senza chiedere, ma tieni la conferma sui comandi che escono dalla sandbox: vedrai ogni comando prima che parta. I dettagli sono nella pagina sui [permessi](https://antigravity.google/docs/permissions/).
 
 ## Il file di contesto
 Duration: 0:05:00
@@ -194,8 +278,8 @@ Se hai copiato lo starter kit, `AGENTS.md` è già nella cartella: leggilo con c
 ```markdown
 # Progetto: oii-solver (ADK 2.x, Python)
 Rete di agenti che risolve problemi OII di training.olinfo.it in Python e insegna a
-migliorare il codice. Gira sulla macchina host: google-adk>=2.9 e Python sono già
-installati. Non installare nulla.
+migliorare il codice. Gira sulla macchina host, nell'ambiente virtuale .venv già attivo:
+google-adk>=2.9, requests, python-dotenv e pymupdf sono già installati. Non installare nulla.
 
 ## Due modalità, un grafo
 - risolvi <task>: prima una v1 semplice e corretta, poi il Reviewer la migliora un passo alla volta.
@@ -276,6 +360,11 @@ POST JSON a https://training.olinfo.it/api/<endpoint> → {"success":1,...} o {"
 L'API di training.olinfo.it non è documentata: le chiamate sono ricavate dal client open source che usa il sito stesso, e il sito può cambiare senza preavviso. Per questo il downloader ripiega sulla pagina pubblica del task. Se qualcosa non torna, verifica prima questa sezione.
 </aside>
 
+### Per approfondire
+
+* [Antigravity CLI: file di contesto e buone pratiche](https://antigravity.google/docs/cli/best-practices/)
+* [I workflow a grafo di ADK](https://adk.dev/graphs/): perché un sistema di agenti si descrive con nodi e archi
+
 ## Come lavoreremo
 Duration: 0:03:00
 
@@ -287,11 +376,14 @@ Il codelab procede in dieci passi, raggruppati in quattro atti. Ognuno segue lo 
 2. **Leggi la spiegazione** mentre agy lavora: ti dice cosa sta succedendo e perché.
 3. **Verifichi** in `adk web` che il sistema faccia la cosa nuova.
 
-Dopo il passo 1 apri un secondo terminale nella stessa cartella e lascia girare:
+Dopo il passo 1 apri un secondo terminale nella stessa cartella, attiva l'ambiente virtuale e lascia girare `adk web`:
 
 ```console
+source .venv/bin/activate
 adk web --reload_agents
 ```
+
+`--reload_agents` ricarica gli agenti ogni volta che agy modifica il codice. Se la porta 8000 è occupata, aggiungi `--port 8080` e apri quell'indirizzo.
 
 Apri `http://localhost:8000`, scegli `oii_solver` e usa una **nuova sessione** per ogni prova.
 
@@ -303,15 +395,20 @@ Nella vista a grafo di `adk web` vedi il workflow com'è davvero: il nodo attivo
 
 All'inizio di ogni passo trovi il grafo com'è dopo quel passo: **in blu** i nodi che aggiungi, pieni quelli già costruiti, **grigi e tratteggiati** quelli che arriveranno.
 
-### Salva una copia dopo ogni passo
+### Salva dopo ogni passo
 
-Quando un passo funziona, salva una copia del progetto:
+Quando la verifica di un passo riesce, fai un commit, dal primo terminale o chiedendolo ad agy:
 
 ```console
-cp -r ../oii-solver ~/snapshot/passo-N
+git add -A && git commit -m "passo N"
 ```
 
-Se un passo successivo rompe qualcosa che non riesci a riparare, torni alla copia e riprovi.
+Se un passo successivo rompe qualcosa che non riesci a riparare, torni all'ultimo commit (vedi «Se qualcosa va storto»).
+
+### Per approfondire
+
+* [L'interfaccia web di ADK](https://adk.dev/runtime/web-interface/)
+* [Antigravity CLI: tutorial](https://antigravity.google/docs/cli/tutorial/) e [comandi](https://antigravity.google/docs/cli/reference/)
 
 ## Passo 1 · Scheletro e intake
 Duration: 0:04:00
@@ -331,6 +428,11 @@ Verifica con python -c "from oii_solver.agent import root_agent".
 ### Verifica
 
 Avvia `adk web --reload_agents` nel secondo terminale, poi scrivi `risolvi ⟨task⟩`. Il sistema risponde con modalità e nome del task.
+
+### Per approfondire
+
+* [La guida rapida di ADK per Python](https://adk.dev/get-started/python/): come `adk web` trova `root_agent` in `agent.py`
+* [I workflow a grafo](https://adk.dev/graphs/): `Workflow`, nodi funzione ed `Event`
 
 ## Passo 2 · Downloader
 Duration: 0:05:00
@@ -383,6 +485,11 @@ Compare la tabella dei subtask con punti e limiti: è la mappa dei punti del pro
 
 ![Esempio illustrativo di ciò che vedi in adk web dopo il passo 3](img/chat-reader.png)
 
+### Per approfondire
+
+* [Passare i dati tra i nodi](https://adk.dev/graphs/data-handling/): output tipizzati con schema, `output_key` e stato della sessione
+* [Usare i modelli Gemini con ADK](https://adk.dev/agents/models/google-gemini/)
+
 ## Passo 4 · Solver rapido e Test author in parallelo
 Duration: 0:05:00
 
@@ -407,6 +514,10 @@ Dopo il join, un nodo provvisorio che mostra titolo e complessità della v1. Ver
 ### Verifica
 
 Arriva la v1 con titolo e complessità. Nella vista degli eventi di `adk web` si vede che i due rami sono partiti insieme.
+
+### Per approfondire
+
+* [Route, rami paralleli e cicli](https://adk.dev/graphs/routes/): il fan-out con `JoinNode`
 
 ## Passo 5 · Test runner
 Duration: 0:05:00
@@ -477,6 +588,10 @@ Salva ogni versione corretta in work/<task>/<modalità>/v<N>.py e, alla fine, il
 
 In una nuova sessione scrivi `risolvi ⟨task⟩` e osserva il tabellone crescere: ogni riga dice cosa è cambiato, perché, e quanti punti vale adesso.
 
+### Per approfondire
+
+* [Route, rami paralleli e cicli](https://adk.dev/graphs/routes/): `Event(route=...)` e gli archi che tornano indietro
+
 ## Passo 8 · Approvazione e invio
 Duration: 0:04:00
 
@@ -500,6 +615,10 @@ In una nuova sessione scrivi `risolvi ⟨task⟩`. Alla fine del ciclo il sistem
 <aside class="negative">
 Per l'invio reale usa un account dedicato agli esperimenti, mai quello di un concorrente: i punteggi finiscono nella classifica pubblica. Finché non sei sicuro, lascia <code>OLINFO_DRY_RUN=1</code>. Il sito può cambiare anche l'API di invio: prova l'invio reale prima dell'uso, con l'account dedicato.
 </aside>
+
+### Per approfondire
+
+* [L'input umano nei workflow](https://adk.dev/graphs/human-input/): come `RequestInput` mette in pausa il grafo e come riprende
 
 ## Passo 9 · Valuta il tuo codice
 Duration: 0:06:00
@@ -593,11 +712,14 @@ Il nodo <nome> dà questo errore: <incolla>. Correggi solo quel nodo, senza tocc
 
 ### Un passo non si recupera
 
-Chiudi agy, ripristina la copia dell'ultimo passo riuscito e riparti:
+Chiudi agy e riporta il progetto all'ultimo commit, cioè all'ultimo passo riuscito:
 
 ```console
-cd .. && rm -rf oii-solver && cp -r ~/snapshot/passo-N oii-solver && cd oii-solver
+git reset --hard
+git clean -fd
 ```
+
+I due comandi cancellano tutte le modifiche fatte dopo l'ultimo commit. Ambiente virtuale, `.env`, `work/` e `fallback/` restano intatti, perché git li ignora. Con `git log --oneline` vedi i passi salvati.
 
 Riapri agy e scrivi: «Ho ripristinato il progetto al passo N: rileggi i file e continuiamo dal passo N+1.»
 
@@ -607,6 +729,9 @@ Se il lavoro si interrompe a metà, assicurati che `CONTINUA.md` sia nella carte
 
 ### Altri problemi comuni
 
+* **`agy` o `adk` non trovati:** apri un nuovo terminale, entra nella cartella del progetto e riattiva l'ambiente virtuale con `source .venv/bin/activate`.
+* **`ModuleNotFoundError` durante una verifica:** agy sta usando un Python senza le librerie. Chiudilo, attiva l'ambiente virtuale nello stesso terminale e riavvialo.
+* **Errore sulla chiave API o `401`/`403` dal modello:** controlla `GOOGLE_API_KEY` in `.env`, poi riavvia `adk web`.
 * **adk web non vede le modifiche:** riavvialo nel secondo terminale.
 * **Il downloader rifiuta il task:** controlla nella pagina pubblica che l'input/output sia stdin/stdout e che non serva un grader C/C++.
 * **Il downloader non trova testo o allegati:** il sito può essere cambiato. Con il prompt jolly chiedi ad agy di aprire la pagina pubblica del task e di adattare il parser.
@@ -638,5 +763,14 @@ Hai costruito una rete di agenti che risolve problemi reali delle Olimpiadi e in
 
 * Prova la modalità `valuta` sulle tue soluzioni di gara: il confronto con la versione del sistema, sugli stessi input, ti dice dove perdi tempo.
 * Aggiungi il supporto ai task con grader Python.
-* Documentazione di ADK 2.x: [adk.dev](https://adk.dev)
-* Problemi per allenarti, tu e i tuoi agenti: [training.olinfo.it](https://training.olinfo.it)
+* Problemi per allenarti, tu e i tuoi agenti: [training.olinfo.it](https://training.olinfo.it).
+
+### Per saperne di più
+
+* Documentazione di ADK: [adk.dev](https://adk.dev), in particolare i [workflow a grafo](https://adk.dev/graphs/).
+* Il codice di ADK per Python: [google/adk-python](https://github.com/google/adk-python), e molti agenti di esempio in [google/adk-samples](https://github.com/google/adk-samples).
+* Documentazione di [Antigravity CLI](https://antigravity.google/docs/cli/install/), con le [buone pratiche](https://antigravity.google/docs/cli/best-practices/).
+* Altri codelab di Google: [ADK 2 Orchestration](https://codelabs.developers.google.com/adk2/instructions), su grafi, agenti collaborativi e workflow dinamici, e [Spec-Driven ADK Agent Development with Antigravity](https://codelabs.developers.google.com/sdd-adk-antigravity).
+* Le [slide della lectio](https://github.com/nicolaguglielmi/OII-Agentic-Trainer-Codelab/blob/main/slides/il-concorrente-artificiale.pdf) «Il concorrente artificiale».
+
+Hai trovato un errore o hai un'idea per migliorare il codelab? Apri una [issue su GitHub](https://github.com/nicolaguglielmi/OII-Agentic-Trainer-Codelab/issues).
