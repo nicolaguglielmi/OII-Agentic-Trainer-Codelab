@@ -1,0 +1,27 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2026-09-26T05:16:28Z",
+  "id": "concorrente-artificiale-adk2",
+  "duration": 76,
+  "title": "Il concorrente artificiale: una rete di agenti con ADK 2.0",
+  "summary": "Con ADK 2.0 e Antigravity CLI costruisci una rete di agenti che risolve problemi delle Olimpiadi Italiane di Informatica in Python, migliora le soluzioni un passo alla volta e insegna a migliorare il tuo codice.",
+  "source": "concorrente-artificiale.md",
+  "theme": "",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "ai",
+    "agents",
+    "adk",
+    "antigravity",
+    "olimpiadi"
+  ],
+  "tags": [
+    "web"
+  ],
+  "url": "concorrente-artificiale-adk2"
+}
