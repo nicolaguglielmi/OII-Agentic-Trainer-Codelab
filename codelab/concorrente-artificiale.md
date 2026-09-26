@@ -133,7 +133,7 @@ Apri la pagina dei problemi di training.olinfo.it (per anno, oppure Nazionali e 
 
 Evita i task che richiedono un grader C/C++ senza un `grader.py`, e le Territoriali (`terry/`), che usano un altro sistema. Un esempio adatto: `ois_rockpaperscissors`.
 
-Annota il nome: nel resto del codelab lo chiameremo `<task>`.
+Annota il nome: nel resto del codelab lo chiameremo `⟨task⟩`.
 
 <aside class="negative">
 I limiti di tempo delle OII sono tarati sul C++. In Python una soluzione con la complessità giusta può comunque sforare sui subtask più grandi. Per questo codelab è un vantaggio: vedrai il punteggio stimato salire versione dopo versione.
@@ -209,9 +209,7 @@ Nodi LLM: reader, quick_solver, test_author, test_author_v, reviewer, tutor. Gli
 POST JSON a https://training.olinfo.it/api/<endpoint> → {"success":1,...} o {"success":0,"error"}
 - task {action:"get", name} → title, task_type, time_limit (s), memory_limit (byte),
   statements {lingua: digest}, attachments [[nome, digest]], submission_format, supported_languages
-- File e allegati: https://training.olinfo.it/files/<digest>/<nome>
-- Pagina pubblica https://training.olinfo.it/task/<nome>: titolo, limiti, input/output, allegati.
-  Se l'API non risponde, leggi i dati da qui. I linguaggi ammessi si vedono solo dopo il login.
+- GET /api/files/<digest>/<nome> → file
 - user {action:"login", username, password, keep_signed:false} → cookie training_token
 - submission {action:"new", task_name, files:{<formato>:{data:base64, filename, language}}} → id
 - submission {action:"details", id} → compilation_outcome, evaluation_outcome, score, score_details
@@ -222,7 +220,7 @@ POST JSON a https://training.olinfo.it/api/<endpoint> → {"success":1,...} o {"
   (sys.stdin.buffer per leggere in fretta).
 - Esecuzione: pypy3 se installato e ammesso dal task, altrimenti python3; sempre in una
   cartella temporanea con limiti di tempo, memoria e dimensione file (resource.setrlimit). Mai come root.
-- Task adatti: input/output su stdin/stdout, template .py tra gli allegati, nessun grader C/C++ obbligatorio.
+- Task adatti: Batch, Python tra i supported_languages, nessun grader C/C++ obbligatorio.
 - Confronto output a token (split()).
 - Ogni passo finisce con una verifica veloce.
 - Tutto in italiano: messaggi, prompt, commenti.
@@ -277,14 +275,14 @@ Il primo nodo del grafo non è intelligente, ed è voluto: è una funzione Pytho
 Incolla in agy:
 
 ```console
-Segui AGENTS.md. Crea il progetto: pacchetto oii_solver per adk web, requirements.txt, .env.example con GOOGLE_API_KEY, FAST_MODEL, STRONG_MODEL, MAX_STEPS=4, MAX_FIX=3, STRESS_ITERS=60, OLINFO_DRY_RUN=1. Non toccare il file .env: esiste già.
+Segui AGENTS.md. Crea il progetto: pacchetto oii_solver per adk web, requirements.txt, .env.example con GOOGLE_API_KEY, FAST_MODEL, STRONG_MODEL, MAX_STEPS=4, MAX_FIX=3, STRESS_ITERS=60, OLINFO_DRY_RUN=1, OLINFO_USERNAME, OLINFO_PASSWORD (questi ultimi due vuoti: servono solo per l'invio reale al passo 8). Non toccare il file .env: esiste già.
 Primo nodo: intake. Capisce la modalità dal messaggio: "risolvi <task>" oppure "valuta <task>" con il codice dello studente incollato in un blocco python o allegato come file .py. Gestisci node_input sia come testo sia come Content con parti inline. Salva modalità, task ed eventuale codice nello stato e rispondi con un riepilogo.
 Verifica con python -c "from oii_solver.agent import root_agent".
 ```
 
 ### Verifica
 
-Avvia `adk web --reload_agents` nel secondo terminale, poi scrivi `risolvi <task>`. Il sistema risponde con modalità e nome del task.
+Avvia `adk web --reload_agents` nel secondo terminale, poi scrivi `risolvi ⟨task⟩`. Il sistema risponde con modalità e nome del task.
 
 ## Passo 2 · Downloader
 Duration: 0:05:00
@@ -293,22 +291,27 @@ Duration: 0:05:00
 
 Il Downloader scarica il testo in PDF e gli allegati, e riconosce gli esempi. Il PDF passa al modello così com'è: Gemini legge formule e figure senza bisogno di estrarre il testo.
 
-Il sito non documenta la sua API e può cambiarla: il Downloader prova prima l'API e, se non risponde, legge la pagina pubblica del task. Si ferma solo se il task non è adatto, e riusa i file già scaricati: meno attese, meno dipendenza dalla rete.
+Il sito non documenta la sua API e può cambiarla: infatti, verificata dal vivo, l'API JSON di AGENTS.md non risponde più su nessun endpoint (il sito è stato riscritto). Il Downloader se ne accorge da solo — un 404 sulla rotta, non un errore applicativo — e ripiega sulla pagina pubblica del task, leggendo titolo, limiti e allegati direttamente dall'HTML. Solo il download dei file resta all'indirizzo pubblico, senza il prefisso `/api`. Se anche il sito non risponde, un'ultima riserva locale in `fallback/⟨task⟩/` permette di continuare l'esercizio offline. Si ferma solo se il task non è adatto, e riusa i file già scaricati: meno attese, meno dipendenza dalla rete.
 
 Incolla in agy:
 
 ```console
-Scrivi oii_solver/olinfo.py con il client dell'API descritta in AGENTS.md e il nodo download_task. Prova prima l'API JSON; se non risponde o dà errore, usa la pagina pubblica https://training.olinfo.it/task/<task>: da lì leggi titolo, limiti di tempo e memoria, tipo di input/output, punteggio massimo e i link degli allegati (https://training.olinfo.it/files/<digest>/<nome>). Per il testo cerca nell'HTML il link al PDF, o i dati JSON che la pagina incorpora.
-Scarica testo.pdf (italiano, altrimenti inglese) e gli allegati in work/<task>/, estraendo gli zip, e trova gli esempi input/output negli allegati. Se work/<task>/ contiene già testo e allegati, usali senza riscaricarli.
-I linguaggi ammessi si vedono solo dopo il login: considera Python ammesso se tra gli allegati c'è un template .py, altrimenti scrivi "Python: da verificare all'invio" e continua. Fermati con un messaggio chiaro solo se l'input/output non è stdin/stdout o se serve un grader C/C++ senza un grader.py. Passa al nodo dopo un Content con il PDF e i sorgenti allegati. Prova su <task>.
+Scrivi oii_solver/olinfo.py con il client dell'API descritta in AGENTS.md e il nodo download_task. Prova prima l'API JSON; solo se un endpoint risponde 404 (rotta inesistente, non un errore applicativo {success:0}) ripiega sulla pagina pubblica https://training.olinfo.it/task/<task>: da lì leggi titolo, limiti di tempo e memoria, tipo di input/output, punteggio massimo e i link degli allegati. In entrambi i casi i file (testo e allegati) si scaricano da https://training.olinfo.it/files/<digest>/<nome>, senza il prefisso /api. Per il testo cerca nell'HTML il link al PDF, o i dati JSON che la pagina incorpora.
+Scarica testo.pdf (italiano, altrimenti inglese) e gli allegati in work/<task>/, estraendo gli zip, e trova gli esempi input/output negli allegati. Valida il PDF con PyMuPDF (fitz): deve iniziare con %PDF- e avere almeno una pagina, altrimenti il download non è andato a buon fine. Se work/<task>/meta.json esiste e il PDF è valido, riusa tutto senza riscaricare.
+Se il sito non risponde o non restituisce dati sufficienti (né limiti né allegati), e non è già tutto in cache, ripiega su una riserva locale in fallback/<task>/ (testo.pdf e meta.json con titolo, limiti, tipo di input/output), se presente; altrimenti fermati con un messaggio chiaro.
+I linguaggi ammessi si vedono solo dopo il login: considera Python ammesso se tra gli allegati c'è un template .py (il nome breve del task, oppure grader/manager/stub), altrimenti scrivi "Python: da verificare all'invio" e continua. Fermati con un messaggio chiaro solo se l'input/output non è stdin/stdout o se serve un grader C/C++ senza un grader.py. Aggiungi pymupdf a requirements.txt. Passa al nodo dopo un Content con il PDF e i sorgenti allegati. Prova su <task>.
 ```
 
 ### Verifica
 
-In una nuova sessione scrivi `risolvi <task>`: compaiono titolo, limiti di tempo e memoria, allegati ed esempi trovati.
+In una nuova sessione scrivi `risolvi ⟨task⟩`: compaiono titolo, limiti di tempo e memoria, allegati ed esempi trovati.
 
 <aside class="negative">
 In Linux agy esegue i comandi in una sandbox. Se la prova del downloader non raggiunge training.olinfo.it, lancia tu il test nel secondo terminale.
+</aside>
+
+<aside class="positive">
+Se il sito non risponde nemmeno a te, o vuoi lavorare offline, crea a mano <code>fallback/⟨task⟩/meta.json</code> (titolo, <code>time_limit</code>, <code>memory_limit_mb</code>, <code>input_output</code>) e <code>fallback/⟨task⟩/testo.pdf</code>: il Downloader li userà come ultima riserva, senza mai sostituire un sito che funziona.
 </aside>
 
 ## Passo 3 · Reader
@@ -422,7 +425,7 @@ Salva ogni versione corretta in work/<task>/<modalità>/v<N>.py e, alla fine, il
 
 ### Verifica
 
-In una nuova sessione scrivi `risolvi <task>` e osserva il tabellone crescere: ogni riga dice cosa è cambiato, perché, e quanti punti vale adesso.
+In una nuova sessione scrivi `risolvi ⟨task⟩` e osserva il tabellone crescere: ogni riga dice cosa è cambiato, perché, e quanti punti vale adesso.
 
 ## Passo 8 · Approvazione e invio
 Duration: 0:04:00
@@ -434,13 +437,13 @@ Un agente che agisce nel mondo reale deve chiedere il permesso. `RequestInput` m
 Incolla in agy:
 
 ```console
-Sostituisci il nodo finale di "done_solve" con il cancello umano: ask_approval fa RequestInput con il tabellone e chiede di scrivere «invia»; se la risposta lo contiene vai a submit, altrimenti a stop.
+Sostituisci il nodo finale di "done_solve" con il cancello umano: ask_approval fa RequestInput con il tabellone e chiede di scrivere «invia»; se la risposta è esattamente «invia» (a meno di spazi e maiuscole) vai a submit, altrimenti a stop.
 submit: con OLINFO_DRY_RUN=1 simula soltanto. Altrimenti fa login con le credenziali in .env e legge i linguaggi ammessi, visibili solo dopo il login: se Python non c'è, si ferma e lo dice; se c'è, invia la versione best, in PyPy se ammesso, altrimenti Python 3. Attende l'esito e mostra, per ogni subtask, il punteggio ufficiale accanto a quello stimato. Verifica con un import.
 ```
 
 ### Verifica
 
-In una nuova sessione scrivi `risolvi <task>`. Alla fine del ciclo il sistema si ferma e chiede conferma: scrivi `invia`.
+In una nuova sessione scrivi `risolvi ⟨task⟩`. Alla fine del ciclo il sistema si ferma e chiede conferma: scrivi `invia`.
 
 ![Esempio illustrativo del giro completo: tabellone finale, richiesta di approvazione, invio e punteggio](img/chat-approvazione.png)
 
@@ -467,7 +470,7 @@ Dopo il tutor, un nodo render_report senza LLM che per ora scrive work/<task>/va
 
 ### Verifica
 
-In una nuova sessione scrivi `valuta <task>` e allega il tuo file `.py`, oppure incolla il codice in un blocco python. Alla fine compare la guida.
+In una nuova sessione scrivi `valuta ⟨task⟩` e allega il tuo file `.py`, oppure incolla il codice in un blocco python. Alla fine compare la guida.
 
 ![Esempio illustrativo di guida.md: review del codice e passi verificati](img/guida.png)
 
@@ -482,10 +485,10 @@ Duration: 0:05:00
 
 La guida in testo dice cosa cambiare; la vista visiva lo mostra. Il nodo `render_report`, senza LLM, costruisce una pagina HTML con:
 
-* il grafico dei tempi per subtask di ogni versione, con la linea del limite di tempo;
+* il grafico dei tempi per subtask della versione finale, con la linea del limite di tempo;
 * il diff affiancato tra una versione e la successiva, generato da `difflib.HtmlDiff` della libreria standard;
 * i controesempi delle correzioni;
-* la spiegazione del Tutor accanto a ogni diff.
+* accanto a ogni diff, il `why` registrato con quella versione: il motivo che ha spinto Solver rapido, Test author o Reviewer a scriverla così.
 
 Il diff non lo scrive il modello: è la differenza reale tra due versioni che hanno superato i test.
 
@@ -496,11 +499,11 @@ Incolla in agy:
 ```console
 Estendi render_report, sempre senza LLM. Oltre a guida.md scrive in work/<task>/<modalità>/ report.html, una pagina unica senza dipendenze esterne, con:
 1) intestazione con task, punteggio stimato iniziale e finale;
-2) grafico SVG dei tempi per subtask di ogni versione, con la linea del time limit e ✓/✗;
-3) per ogni passo: spiegazione del tutor, diff affiancato tra versione precedente e nuova fatto con difflib.HtmlDiff (solo righe cambiate, 3 di contesto), risultato misurato;
+2) grafico SVG dei tempi per subtask della versione finale (best), con la linea del time limit e ✓/✗;
+3) per ogni passo: il why registrato con quella versione, diff affiancato tra versione precedente e nuova fatto con difflib.HtmlDiff (solo righe cambiate, 3 di contesto), risultato misurato;
 4) per le correzioni, il controesempio: input, output atteso, output ottenuto;
-5) la soluzione finale chiusa in un <details> "guardala dopo averci provato".
-Collega anche submit e stop a render_report: in modalità risolvi usa il why del reviewer al posto della spiegazione del tutor. In chat mostra il percorso di report.html. Verifica generando il report dalla storia di un'esecuzione precedente.
+5) la soluzione finale chiusa in un <details> con intestazione "Soluzione finale (v<N>)".
+Collega anche submit e stop a render_report. In chat mostra il percorso di report.html. Verifica generando il report dalla storia di un'esecuzione precedente.
 ```
 
 ### Verifica
